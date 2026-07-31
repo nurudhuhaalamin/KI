@@ -89,7 +89,7 @@ Nomor Bagian merujuk proposal sumber yang menjadi acuan cakupan.
 | #   | Modul                                                                    | Sumber        | Status                                  |
 | --- | ------------------------------------------------------------------------ | ------------- | --------------------------------------- |
 | —   | Kerangka teknis & alat verifikasi                                        | —             | **selesai**                             |
-| A   | Fondasi: pengguna, peran, unit kerja, jejak audit, konfigurasi           | II            | sebagian (auth & jejak audit sudah ada) |
+| A   | Fondasi: pengguna, peran, unit kerja, jabatan, jejak audit, konfigurasi  | II            | **selesai**                             |
 | B   | Kavling, tenant & kontrak                                                | IV.3, IV.4    | belum                                   |
 | C   | Pengendalian dokumen: daftar induk, penomoran, versi, pengesahan         | XI.1          | belum                                   |
 | D   | Perizinan satu pintu: formulir dinamis, persetujuan berjenjang, SLA      | IV.1, IV.2    | belum                                   |

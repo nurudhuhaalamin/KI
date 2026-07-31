@@ -1,0 +1,59 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ki",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Aset statis hasil build (JS, CSS, gambar).
+  "assets": {
+    "directory": "./build/client",
+    "not_found_handling": "single-page-application",
+  },
+
+  // Nilai non-rahasia. Rahasia (kunci API, dsb.) TIDAK ditaruh di sini —
+  // gunakan `wrangler secret put <NAMA>` atau berkas .dev.vars untuk lokal.
+  "vars": {
+    "NAMA_KAWASAN": "Kawasan Industri Contoh",
+    "LOKALE_BAWAAN": "id",
+  },
+
+  // Database kawasan. Satu kawasan = satu database.
+  // database_id diisi setelah menjalankan: wrangler d1 create ki-db
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ki-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "db/migrations",
+    },
+  ],
+
+  // Penyimpanan berkas: dokumen izin, foto inspeksi, lampiran, arsip.
+  "r2_buckets": [
+    {
+      "binding": "BERKAS",
+      "bucket_name": "ki-berkas",
+    },
+  ],
+
+  "env": {
+    "preview": {
+      "name": "ki-preview",
+      "vars": {
+        "NAMA_KAWASAN": "Kawasan Industri Contoh (Pratinjau)",
+        "LOKALE_BAWAAN": "id",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ki-db-preview",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "db/migrations",
+        },
+      ],
+      "r2_buckets": [{ "binding": "BERKAS", "bucket_name": "ki-berkas-preview" }],
+    },
+  },
+}

@@ -1,0 +1,17 @@
+# Rahasia — jangan pernah di-commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Konfigurasi Claude Code yang bersifat pribadi
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Artefak OS dan editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

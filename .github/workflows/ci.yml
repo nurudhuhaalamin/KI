@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  periksa:
+    name: Periksa mutu
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pasang dependensi
+        run: npm ci
+
+      - name: Pemeriksaan tipe
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Test unit
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # Rahasia untuk pengembangan/CI saja. Rahasia produksi diatur lewat
+      # `wrangler secret put`, tidak pernah ada di repo.
+      - name: Siapkan variabel lokal
+        run: cp .dev.vars.example .dev.vars
+
+      - name: Siapkan database uji
+        run: |
+          npm run db:migrate:local
+          npm run db:seed
+
+      - name: Pasang peramban Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Test end-to-end
+        run: npm run test:e2e
+
+      - name: Simpan laporan Playwright
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: laporan-playwright
+          path: playwright-report/
+          retention-days: 14
+
+  deploy-pratinjau:
+    name: Deploy pratinjau
+    needs: periksa
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Selama pemilik repo belum menyiapkan akun Cloudflare, langkah deploy
+      # dilewati dan CI tetap hijau. Pemeriksaan mutu di atas tetap berjalan.
+      - name: Periksa ketersediaan kredensial Cloudflare
+        id: kredensial
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] && [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "tersedia=ya" >> "$GITHUB_OUTPUT"
+          else
+            echo "tersedia=tidak" >> "$GITHUB_OUTPUT"
+            echo "::notice::Secret Cloudflare belum diatur — deploy pratinjau dilewati."
+          fi
+
+      - name: Pasang dependensi
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        run: npm ci
+
+      - name: Build
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        run: npm run build
+
+      - name: Jalankan migrasi database pratinjau
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply ki-db-preview --remote --env preview
+
+      - name: Deploy ke lingkungan pratinjau
+        id: deploy
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          keluaran=$(npx wrangler deploy --env preview 2>&1 | tee /dev/stderr)
+          url=$(printf '%s' "$keluaran" | grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' | head -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Tempelkan tautan pratinjau di PR
+        if: steps.kredensial.outputs.tersedia == 'ya' && steps.deploy.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = "${{ steps.deploy.outputs.url }}";
+            const penanda = "<!-- pratinjau-ki -->";
+            const isi = `${penanda}\n### Pratinjau siap\n\n${url}\n\nAkun demo: \`admin@contoh.test\` / \`KawasanDemo2026!\``;
+
+            const { data: komentar } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const lama = komentar.find((k) => k.body?.includes(penanda));
+
+            if (lama) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: lama.id,
+                body: isi,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: isi,
+              });
+            }
+
+  deploy-produksi:
+    name: Deploy produksi
+    needs: periksa
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Periksa ketersediaan kredensial Cloudflare
+        id: kredensial
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] && [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "tersedia=ya" >> "$GITHUB_OUTPUT"
+          else
+            echo "tersedia=tidak" >> "$GITHUB_OUTPUT"
+            echo "::notice::Secret Cloudflare belum diatur — deploy produksi dilewati."
+          fi
+
+      - name: Pasang dependensi
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        run: npm ci
+
+      - name: Build
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        run: npm run build
+
+      - name: Jalankan migrasi database produksi
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply ki-db --remote
+
+      - name: Deploy
+        if: steps.kredensial.outputs.tersedia == 'ya'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy

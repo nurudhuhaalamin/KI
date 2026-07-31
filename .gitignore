@@ -15,3 +15,15 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Rahasia lokal Cloudflare Workers
+.dev.vars
+!.dev.vars.example
+
+# Hasil build & cache
+node_modules/
+build/
+.wrangler/
+.react-router/
+test-results/
+playwright-report/

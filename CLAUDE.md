@@ -8,17 +8,27 @@ Sistem pengelolaan kawasan industri. Pedoman lengkap pemakaian Claude Code ada d
 - Percakapan, komentar kode, pesan commit, dan dokumentasi: **Bahasa Indonesia**.
 - Nama variabel, fungsi, kelas, tabel, dan endpoint: **Bahasa Inggris**.
 
+## Stack
+
+TypeScript + React Router v8 (framework mode) di Cloudflare Workers.
+Database Cloudflare D1 lewat Drizzle ORM; berkas di R2; autentikasi Better Auth;
+tampilan Tailwind CSS. Satu kawasan = satu instans (Worker + D1 + R2 sendiri).
+Rinciannya di `docs/arsitektur.md`.
+
 ## Perintah penting
 
-TODO — stack belum ditentukan. Isi blok ini segera setelah stack dipilih;
-tanpa perintah yang bisa dijalankan, Claude tidak punya cara memverifikasi hasilnya.
+```
+Dev        : npm run dev
+Periksa    : npm run check      # typecheck + lint + test + build
+Test unit  : npm run test
+Test E2E   : npm run test:e2e   # Playwright, menjalankan aplikasi sungguhan
+Migrasi    : npm run db:migrate:local
+Data demo  : npm run db:seed
+```
 
-```
-Build : TODO
-Test  : TODO
-Lint  : TODO
-Dev   : TODO
-```
+Sebelum menyatakan pekerjaan selesai, jalankan `npm run check` dan tunjukkan
+hasilnya. Untuk perubahan yang menyentuh tampilan atau alur pengguna, jalankan
+juga `npm run test:e2e`.
 
 ## Alur kerja
 

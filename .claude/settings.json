@@ -19,6 +19,8 @@
       "Edit(./**/*.pem)",
       "Read(./**/*.key)",
       "Edit(./**/*.key)",
+      "Read(./.dev.vars)",
+      "Edit(./.dev.vars)",
       "Bash(git push * main)",
       "Bash(git push --force *)",
       "Bash(git push -f *)",
@@ -35,6 +37,32 @@
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/cegah-perintah-berisiko.sh",
             "args": [],
             "statusMessage": "Memeriksa perintah berisiko..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-berkas.sh",
+            "args": [],
+            "statusMessage": "Memeriksa gaya kode..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/cek-mutu.sh",
+            "args": [],
+            "timeout": 300,
+            "statusMessage": "Menjalankan pemeriksaan tipe dan test..."
           }
         ]
       }

@@ -1,0 +1,4 @@
+# Salin berkas ini menjadi .dev.vars untuk pengembangan lokal.
+# JANGAN commit .dev.vars — berkas itu berisi rahasia.
+# Untuk produksi gunakan: wrangler secret put BETTER_AUTH_SECRET
+BETTER_AUTH_SECRET="isi-dengan-nilai-acak-minimal-32-karakter"

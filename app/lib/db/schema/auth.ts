@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import { jabatan, unitKerja } from "./organisasi";
+
 /**
  * Peran pengguna sistem. Dipakai untuk memutuskan halaman dan aksi mana
  * yang boleh diakses. Daftar ini bertambah seiring modul dibangun.
@@ -24,6 +26,11 @@ export const users = sqliteTable(
     image: text("image"),
     peran: text("peran", { enum: PERAN }).notNull().default("staf"),
     aktif: integer("aktif", { mode: "boolean" }).notNull().default(true),
+    // Penempatan dalam organisasi. Opsional karena akun administrator pertama
+    // dibuat sebelum struktur organisasi disusun. Menghapus unit kerja atau
+    // jabatan tidak boleh ikut menghapus penggunanya.
+    unitKerjaId: text("unit_kerja_id").references(() => unitKerja.id, { onDelete: "set null" }),
+    jabatanId: text("jabatan_id").references(() => jabatan.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -31,7 +38,7 @@ export const users = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (t) => [index("idx_users_email").on(t.email)],
+  (t) => [index("idx_users_email").on(t.email), index("idx_users_unit").on(t.unitKerjaId)],
 );
 
 export const sessions = sqliteTable(

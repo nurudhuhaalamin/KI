@@ -1,8 +1,10 @@
-import { Form, Link } from "react-router";
+import { and, count, eq } from "drizzle-orm";
 
-import { PemilihBahasa } from "~/components/pemilih-bahasa";
 import { wajibMasuk } from "~/lib/auth/sesi";
 import { cloudflareContext } from "~/lib/context";
+import { buatDb } from "~/lib/db";
+import { users } from "~/lib/db/schema/auth";
+import { jabatan, unitKerja } from "~/lib/db/schema/organisasi";
 import { useDataRoot } from "~/root";
 
 import type { Route } from "./+types/dasbor";
@@ -10,48 +12,84 @@ import type { Route } from "./+types/dasbor";
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   const pengguna = await wajibMasuk(env, request);
+  const db = buatDb(env);
+
+  // Tenant belum punya modul apa pun; jangan bebani database dengan hitungan
+  // yang tidak akan ditampilkan kepadanya.
+  if (pengguna.peran === "tenant") {
+    return { nama: pengguna.nama, peran: pengguna.peran, ringkasan: null };
+  }
+
+  const [jumlahUnit, jumlahJabatan, jumlahPengguna] = await Promise.all([
+    db.select({ n: count() }).from(unitKerja).where(eq(unitKerja.aktif, true)),
+    db.select({ n: count() }).from(jabatan).where(eq(jabatan.aktif, true)),
+    db
+      .select({ n: count() })
+      .from(users)
+      .where(and(eq(users.aktif, true))),
+  ]);
 
   return {
     nama: pengguna.nama,
     peran: pengguna.peran,
+    ringkasan: {
+      unitKerja: jumlahUnit[0]?.n ?? 0,
+      jabatan: jumlahJabatan[0]?.n ?? 0,
+      pengguna: jumlahPengguna[0]?.n ?? 0,
+    },
   };
 }
 
 export default function Dasbor({ loaderData }: Route.ComponentProps) {
-  const { t, locale, namaKawasan } = useDataRoot();
+  const { t } = useDataRoot();
+  const { ringkasan } = loaderData;
+
+  const kartu = ringkasan
+    ? [
+        {
+          label: t.dasbor.jumlahUnitKerja,
+          nilai: ringkasan.unitKerja,
+          testId: "hitung-unit-kerja",
+        },
+        { label: t.dasbor.jumlahJabatan, nilai: ringkasan.jabatan, testId: "hitung-jabatan" },
+        {
+          label: t.dasbor.jumlahPengguna,
+          nilai: ringkasan.pengguna,
+          testId: "hitung-pengguna",
+        },
+      ]
+    : [];
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-        <Link to="/" className="font-semibold">
-          {namaKawasan}
-        </Link>
-        <div className="flex items-center gap-4">
-          <PemilihBahasa aktif={locale} />
-          <Form method="post" action="/keluar">
-            <button
-              type="submit"
-              data-testid="tombol-keluar"
-              className="text-sm font-medium text-slate-600 hover:underline dark:text-slate-400"
-            >
-              {t.nav.keluar}
-            </button>
-          </Form>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
+    <div className="flex flex-col gap-6">
+      <div>
         <h1 className="text-2xl font-semibold" data-testid="judul-dasbor">
           {t.dasbor.judul}
         </h1>
-        <p className="mt-4 text-slate-600 dark:text-slate-400">
+        <p className="mt-2 text-slate-600 dark:text-slate-400">
           {t.dasbor.selamatDatang},{" "}
-          <strong data-testid="nama-pengguna">{loaderData.nama}</strong>.
+          <strong data-testid="nama-pengguna">{loaderData.nama}</strong>. {t.dasbor.peran}:{" "}
+          <span data-testid="peran-pengguna">{loaderData.peran}</span>
         </p>
-        <p className="mt-1 text-slate-600 dark:text-slate-400">
-          {t.dasbor.peran}: <span data-testid="peran-pengguna">{loaderData.peran}</span>
-        </p>
-      </main>
+      </div>
+
+      {kartu.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {kartu.map((k) => (
+            <div
+              key={k.label}
+              className="rounded-md border border-slate-200 p-4 dark:border-slate-800"
+            >
+              <p className="text-sm text-slate-600 dark:text-slate-400">{k.label}</p>
+              <p className="mt-1 text-2xl font-semibold" data-testid={k.testId}>
+                {k.nilai}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <p className="text-sm text-slate-500 dark:text-slate-400">{t.dasbor.belumAdaModul}</p>
     </div>
   );
 }

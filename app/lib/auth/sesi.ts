@@ -9,6 +9,8 @@ export type PenggunaSesi = {
   surel: string;
   peran: Peran;
   aktif: boolean;
+  /** Perusahaan yang ditautkan, hanya terisi untuk pengguna berperan tenant. */
+  tenantId: string | null;
 };
 
 /**
@@ -23,6 +25,7 @@ export async function ambilSesi(env: Env, request: Request): Promise<PenggunaSes
   const pengguna = sesi.user as typeof sesi.user & {
     peran?: Peran;
     aktif?: boolean;
+    tenantId?: string | null;
   };
 
   // Akun yang dinonaktifkan diperlakukan seperti belum masuk.
@@ -34,6 +37,7 @@ export async function ambilSesi(env: Env, request: Request): Promise<PenggunaSes
     surel: pengguna.email,
     peran: pengguna.peran ?? "staf",
     aktif: pengguna.aktif ?? true,
+    tenantId: pengguna.tenantId ?? null,
   };
 }
 

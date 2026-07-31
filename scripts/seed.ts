@@ -161,8 +161,226 @@ const PENEMPATAN: Record<string, { unitKerjaId: string; jabatanId: string }> = {
   "demo-staf": { unitKerjaId: "unit-ops", jabatanId: "jab-staf-izin" },
 };
 
+/** Akun tenant demo ditautkan ke perusahaan demo pertama. */
+const PENAUTAN_TENANT: Record<string, string> = {
+  "demo-tenant": "ten-demo-1",
+};
+
+type KavlingDemo = {
+  id: string;
+  kode: string;
+  blok: string;
+  nomor: string;
+  luasM2: number;
+  peruntukan: "industri" | "komersial" | "fasilitas" | "rth";
+  status: "tersedia" | "dipesan" | "disewa" | "terjual";
+  hargaDasar: number | null;
+};
+
+const KAVLING: KavlingDemo[] = [
+  {
+    id: "kav-a01",
+    kode: "A-01",
+    blok: "A",
+    nomor: "01",
+    luasM2: 10000,
+    peruntukan: "industri",
+    status: "disewa",
+    hargaDasar: 2_500_000_000,
+  },
+  {
+    id: "kav-a02",
+    kode: "A-02",
+    blok: "A",
+    nomor: "02",
+    luasM2: 12500,
+    peruntukan: "industri",
+    status: "terjual",
+    hargaDasar: 3_100_000_000,
+  },
+  {
+    id: "kav-a03",
+    kode: "A-03",
+    blok: "A",
+    nomor: "03",
+    luasM2: 8000,
+    peruntukan: "industri",
+    status: "dipesan",
+    hargaDasar: 2_000_000_000,
+  },
+  {
+    id: "kav-a04",
+    kode: "A-04",
+    blok: "A",
+    nomor: "04",
+    luasM2: 9500,
+    peruntukan: "industri",
+    status: "tersedia",
+    hargaDasar: 2_375_000_000,
+  },
+  {
+    id: "kav-b01",
+    kode: "B-01",
+    blok: "B",
+    nomor: "01",
+    luasM2: 15000,
+    peruntukan: "industri",
+    status: "tersedia",
+    hargaDasar: 3_750_000_000,
+  },
+  {
+    id: "kav-b02",
+    kode: "B-02",
+    blok: "B",
+    nomor: "02",
+    luasM2: 5000,
+    peruntukan: "komersial",
+    status: "tersedia",
+    hargaDasar: 1_500_000_000,
+  },
+  {
+    id: "kav-c01",
+    kode: "C-01",
+    blok: "C",
+    nomor: "01",
+    luasM2: 3000,
+    peruntukan: "fasilitas",
+    status: "tersedia",
+    hargaDasar: null,
+  },
+  {
+    id: "kav-c02",
+    kode: "C-02",
+    blok: "C",
+    nomor: "02",
+    luasM2: 20000,
+    peruntukan: "rth",
+    status: "tersedia",
+    hargaDasar: null,
+  },
+];
+
+type TenantDemo = {
+  id: string;
+  kode: string;
+  nama: string;
+  bentuk: string;
+  bidang: string;
+  status: "calon" | "aktif" | "berakhir";
+};
+
+// Data legalitas sengaja TIDAK diisi di seed: berkas ini ikut ter-commit,
+// dan NPWP/NIB termasuk data yang tidak boleh ada di repo.
+const TENANT: TenantDemo[] = [
+  {
+    id: "ten-demo-1",
+    kode: "TNT-001",
+    nama: "PT Baja Nusantara Sejahtera",
+    bentuk: "PT",
+    bidang: "Pengolahan logam",
+    status: "aktif",
+  },
+  {
+    id: "ten-demo-2",
+    kode: "TNT-002",
+    nama: "PT Kemasan Andalan Prima",
+    bentuk: "PT",
+    bidang: "Kemasan plastik",
+    status: "aktif",
+  },
+  {
+    id: "ten-demo-3",
+    kode: "TNT-003",
+    nama: "CV Mitra Logistik Kendari",
+    bentuk: "CV",
+    bidang: "Pergudangan",
+    status: "calon",
+  },
+];
+
+type KontrakDemo = {
+  id: string;
+  nomor: string;
+  jenis: "jual" | "sewa";
+  tenantId: string;
+  kavlingId: string;
+  mulai: string;
+  berakhir: string | null;
+  nilai: number;
+  status: "draf" | "aktif" | "berakhir" | "batal";
+};
+
+const KONTRAK: KontrakDemo[] = [
+  {
+    id: "knt-demo-1",
+    nomor: "SWA/2026/001",
+    jenis: "sewa",
+    tenantId: "ten-demo-1",
+    kavlingId: "kav-a01",
+    mulai: "2026-01-01",
+    berakhir: "2030-12-31",
+    nilai: 4_500_000_000,
+    status: "aktif",
+  },
+  {
+    id: "knt-demo-2",
+    nomor: "JBL/2026/002",
+    jenis: "jual",
+    tenantId: "ten-demo-2",
+    kavlingId: "kav-a02",
+    mulai: "2026-03-01",
+    berakhir: null,
+    nilai: 3_100_000_000,
+    status: "aktif",
+  },
+  {
+    id: "knt-demo-3",
+    nomor: "SWA/2026/003",
+    jenis: "sewa",
+    tenantId: "ten-demo-3",
+    kavlingId: "kav-a03",
+    mulai: "2026-09-01",
+    berakhir: "2028-08-31",
+    nilai: 1_800_000_000,
+    status: "draf",
+  },
+];
+
+const keDetik = (tanggal: string) =>
+  Math.floor(new Date(`${tanggal}T00:00:00Z`).getTime() / 1000);
+
 function kutip(nilai: string): string {
   return `'${nilai.replaceAll("'", "''")}'`;
+}
+
+/**
+ * Menyusun pernyataan upsert berdasarkan kolom `id`.
+ *
+ * Sengaja TIDAK memakai `INSERT OR REPLACE`: di SQLite, REPLACE berarti DELETE
+ * lalu INSERT, sehingga menghapus baris induk dan memicu cascade ke tabel anak
+ * — pada skema ini hal itu melanggar foreign key dan menggagalkan seluruh seed.
+ * `ON CONFLICT DO UPDATE` memperbarui baris di tempat, tanpa menghapus apa pun.
+ */
+function upsert(
+  tabel: string,
+  nilai: Record<string, string | number | null>,
+  kunci = "id",
+): string {
+  const kolom = Object.keys(nilai);
+  const isi = kolom.map((k) => {
+    const v = nilai[k];
+    if (v === null || v === undefined) return "NULL";
+    return typeof v === "number" ? String(v) : kutip(v);
+  });
+  const pembaruan = kolom
+    .filter((k) => k !== kunci)
+    .map((k) => `${k}=excluded.${k}`)
+    .join(", ");
+
+  return (
+    `INSERT INTO ${tabel} (${kolom.join(", ")}) VALUES (${isi.join(", ")}) ` +
+    `ON CONFLICT(${kunci}) DO UPDATE SET ${pembaruan};`
+  );
 }
 
 async function main() {
@@ -173,29 +391,132 @@ async function main() {
   // Unit kerja lebih dulu: jabatan dan pengguna merujuk kepadanya.
   for (const unit of UNIT_KERJA) {
     baris.push(
-      `INSERT OR REPLACE INTO unit_kerja (id, kode, nama, nama_en, induk_id, urutan, aktif, created_at, updated_at) VALUES (${kutip(unit.id)}, ${kutip(unit.kode)}, ${kutip(unit.nama)}, ${kutip(unit.namaEn)}, ${unit.indukId ? kutip(unit.indukId) : "NULL"}, ${unit.urutan}, 1, ${sekarang}, ${sekarang});`,
+      upsert("unit_kerja", {
+        id: unit.id,
+        kode: unit.kode,
+        nama: unit.nama,
+        nama_en: unit.namaEn,
+        induk_id: unit.indukId,
+        urutan: unit.urutan,
+        aktif: 1,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
     );
   }
 
   for (const jab of JABATAN) {
     baris.push(
-      `INSERT OR REPLACE INTO jabatan (id, kode, nama, nama_en, unit_kerja_id, atasan_id, aktif, created_at, updated_at) VALUES (${kutip(jab.id)}, ${kutip(jab.kode)}, ${kutip(jab.nama)}, ${kutip(jab.namaEn)}, ${kutip(jab.unitKerjaId)}, ${jab.atasanId ? kutip(jab.atasanId) : "NULL"}, 1, ${sekarang}, ${sekarang});`,
+      upsert("jabatan", {
+        id: jab.id,
+        kode: jab.kode,
+        nama: jab.nama,
+        nama_en: jab.namaEn,
+        unit_kerja_id: jab.unitKerjaId,
+        atasan_id: jab.atasanId,
+        aktif: 1,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+  }
+
+  // Tenant dan kavling lebih dulu: kontrak dan pengguna merujuk keduanya.
+  for (const t of TENANT) {
+    baris.push(
+      upsert("tenant", {
+        id: t.id,
+        kode: t.kode,
+        nama_perusahaan: t.nama,
+        bentuk_badan_usaha: t.bentuk,
+        bidang_usaha: t.bidang,
+        status: t.status,
+        aktif: 1,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+  }
+
+  for (const k of KAVLING) {
+    baris.push(
+      upsert("kavling", {
+        id: k.id,
+        kode: k.kode,
+        blok: k.blok,
+        nomor: k.nomor,
+        luas_m2: k.luasM2,
+        peruntukan: k.peruntukan,
+        status: k.status,
+        harga_dasar: k.hargaDasar,
+        aktif: 1,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+  }
+
+  for (const k of KONTRAK) {
+    baris.push(
+      upsert("kontrak", {
+        id: k.id,
+        nomor: k.nomor,
+        jenis: k.jenis,
+        tenant_id: k.tenantId,
+        kavling_id: k.kavlingId,
+        tanggal_mulai: keDetik(k.mulai),
+        tanggal_berakhir: k.berakhir ? keDetik(k.berakhir) : null,
+        nilai: k.nilai,
+        status: k.status,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
     );
   }
 
   for (const akun of AKUN) {
     const tempat = PENEMPATAN[akun.id];
+    const perusahaan = PENAUTAN_TENANT[akun.id];
     baris.push(
-      `INSERT OR REPLACE INTO users (id, name, email, email_verified, peran, aktif, unit_kerja_id, jabatan_id, created_at, updated_at) VALUES (${kutip(akun.id)}, ${kutip(akun.nama)}, ${kutip(akun.surel)}, 1, ${kutip(akun.peran)}, 1, ${tempat ? kutip(tempat.unitKerjaId) : "NULL"}, ${tempat ? kutip(tempat.jabatanId) : "NULL"}, ${sekarang}, ${sekarang});`,
+      upsert("users", {
+        id: akun.id,
+        name: akun.nama,
+        email: akun.surel,
+        email_verified: 1,
+        peran: akun.peran,
+        aktif: 1,
+        unit_kerja_id: tempat?.unitKerjaId ?? null,
+        jabatan_id: tempat?.jabatanId ?? null,
+        tenant_id: perusahaan ?? null,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
     );
     baris.push(
-      `INSERT OR REPLACE INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES (${kutip(`${akun.id}-credential`)}, ${kutip(akun.id)}, 'credential', ${kutip(akun.id)}, ${kutip(sandi)}, ${sekarang}, ${sekarang});`,
+      upsert("accounts", {
+        id: `${akun.id}-credential`,
+        account_id: akun.id,
+        provider_id: "credential",
+        user_id: akun.id,
+        password: sandi,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
     );
   }
 
   for (const item of PENGATURAN) {
     baris.push(
-      `INSERT OR REPLACE INTO pengaturan (kunci, nilai, keterangan, updated_at) VALUES (${kutip(item.kunci)}, ${kutip(item.nilai)}, ${kutip(item.keterangan)}, ${sekarang});`,
+      upsert(
+        "pengaturan",
+        {
+          kunci: item.kunci,
+          nilai: item.nilai,
+          keterangan: item.keterangan,
+          updated_at: sekarang,
+        },
+        "kunci",
+      ),
     );
   }
 
@@ -215,7 +536,8 @@ async function main() {
   execFileSync("npx", argumen, { stdio: "inherit" });
 
   console.log(
-    `\nSelesai. ${UNIT_KERJA.length} unit kerja, ${JABATAN.length} jabatan, ${AKUN.length} akun demo, dan ${PENGATURAN.length} pengaturan dimuat.`,
+    `\nSelesai. ${UNIT_KERJA.length} unit kerja, ${JABATAN.length} jabatan, ${KAVLING.length} kavling, ` +
+      `${TENANT.length} tenant, ${KONTRAK.length} kontrak, ${AKUN.length} akun demo, dan ${PENGATURAN.length} pengaturan dimuat.`,
   );
   console.log(`Kata sandi seluruh akun demo: ${KATA_SANDI_DEMO}`);
   for (const akun of AKUN) console.log(`  - ${akun.surel} (${akun.peran})`);

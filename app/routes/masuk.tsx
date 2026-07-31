@@ -50,11 +50,22 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!respons.ok) return { gagal: true };
 
   const headers = new Headers();
+  const cookieSesi: string[] = [];
   for (const cookie of respons.headers.getSetCookie()) {
     headers.append("Set-Cookie", cookie);
+    // Bagian sebelum tanda ";" adalah pasangan nama=nilai cookie-nya.
+    const pasangan = cookie.split(";")[0];
+    if (pasangan) cookieSesi.push(pasangan);
   }
 
-  const lanjut = tujuanAman(new URL(request.url).searchParams.get("lanjut"));
+  /** Header Cookie tiruan agar sesi yang baru dibuat bisa langsung dibaca. */
+  const gabungCookie = (): Headers => new Headers({ Cookie: cookieSesi.join("; ") });
+
+  // Pengguna tenant mendarat di portalnya, bukan di area pengelola kawasan.
+  const pengguna = await ambilSesi(env, new Request(request.url, { headers: gabungCookie() }));
+  const bawaan = pengguna?.peran === "tenant" ? "/portal" : "/internal";
+
+  const lanjut = tujuanAman(new URL(request.url).searchParams.get("lanjut"), bawaan);
   return redirect(lanjut, { headers });
 }
 

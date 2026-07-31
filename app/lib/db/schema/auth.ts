@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { jabatan, unitKerja } from "./organisasi";
+import { tenant } from "./tenant";
 
 /**
  * Peran pengguna sistem. Dipakai untuk memutuskan halaman dan aksi mana
@@ -31,6 +32,9 @@ export const users = sqliteTable(
     // jabatan tidak boleh ikut menghapus penggunanya.
     unitKerjaId: text("unit_kerja_id").references(() => unitKerja.id, { onDelete: "set null" }),
     jabatanId: text("jabatan_id").references(() => jabatan.id, { onDelete: "set null" }),
+    // Pengguna berperan "tenant" ditautkan ke satu perusahaan. Portal tenant
+    // menyaring seluruh datanya berdasarkan kolom ini — bukan parameter URL.
+    tenantId: text("tenant_id").references(() => tenant.id, { onDelete: "set null" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),

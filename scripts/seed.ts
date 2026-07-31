@@ -349,6 +349,125 @@ const KONTRAK: KontrakDemo[] = [
 const keDetik = (tanggal: string) =>
   Math.floor(new Date(`${tanggal}T00:00:00Z`).getTime() / 1000);
 
+/** Tanggal relatif terhadap hari ini, dalam detik. Negatif berarti sudah lewat. */
+const hariDariSekarang = (hari: number) => Math.floor(Date.now() / 1000) + hari * 24 * 60 * 60;
+
+type DokumenDemo = {
+  id: string;
+  nomor: string;
+  urut: number;
+  tahun: number;
+  judul: string;
+  judulEn: string;
+  kategori: string;
+  unitKerjaId: string | null;
+  status: "draf" | "ditinjau" | "disahkan" | "kedaluwarsa" | "ditarik";
+  versiTerkini: number;
+  tinjauUlangHari: number | null;
+};
+
+// Enam dokumen lintas kategori. Satu sudah lewat tanggal tinjau ulang dan satu
+// mendekati, supaya peringatan di dasbor langsung terlihat setelah seed.
+const DOKUMEN: DokumenDemo[] = [
+  {
+    id: "dok-demo-1",
+    nomor: "TK/DIR/001/2026",
+    urut: 1,
+    tahun: 2026,
+    judul: "Tata Tertib Kawasan Industri",
+    judulEn: "Estate Code of Conduct",
+    kategori: "tata-kelola",
+    unitKerjaId: "unit-dir",
+    status: "disahkan",
+    versiTerkini: 1,
+    tinjauUlangHari: 300,
+  },
+  {
+    id: "dok-demo-2",
+    nomor: "SOP-PLY/OPS/001/2026",
+    urut: 1,
+    tahun: 2026,
+    judul: "SOP Pelayanan Perizinan Satu Pintu",
+    judulEn: "One-Stop Permit Service SOP",
+    kategori: "sop-pelayanan",
+    unitKerjaId: "unit-ops",
+    status: "disahkan",
+    versiTerkini: 1,
+    tinjauUlangHari: 14,
+  },
+  {
+    id: "dok-demo-3",
+    nomor: "SOP-PLY/OPS/002/2026",
+    urut: 2,
+    tahun: 2026,
+    judul: "SOP Penerimaan & Onboarding Tenant Baru",
+    judulEn: "New Tenant Onboarding SOP",
+    kategori: "sop-pelayanan",
+    unitKerjaId: "unit-ops",
+    status: "ditinjau",
+    versiTerkini: 1,
+    tinjauUlangHari: null,
+  },
+  {
+    id: "dok-demo-4",
+    nomor: "SOP-INF/LK3/001/2026",
+    urut: 1,
+    tahun: 2026,
+    judul: "SOP Pengoperasian & Pemeliharaan IPAL Kawasan",
+    judulEn: "Estate Wastewater Plant Operation SOP",
+    kategori: "sop-infrastruktur",
+    unitKerjaId: "unit-lk3",
+    status: "disahkan",
+    versiTerkini: 1,
+    tinjauUlangHari: -20,
+  },
+  {
+    id: "dok-demo-5",
+    nomor: "K3/LK3/001/2026",
+    urut: 1,
+    tahun: 2026,
+    judul: "Kebijakan K3 Kawasan",
+    judulEn: "Estate OHS Policy",
+    kategori: "k3",
+    unitKerjaId: "unit-lk3",
+    status: "draf",
+    versiTerkini: 0,
+    tinjauUlangHari: null,
+  },
+  {
+    id: "dok-demo-6",
+    nomor: "GCG/DIR/001/2026",
+    urut: 1,
+    tahun: 2026,
+    judul: "Pedoman Good Corporate Governance",
+    judulEn: "Good Corporate Governance Guidelines",
+    kategori: "governance",
+    unitKerjaId: "unit-dir",
+    status: "draf",
+    versiTerkini: 0,
+    tinjauUlangHari: null,
+  },
+];
+
+/**
+ * Berkas contoh untuk dokumen yang sudah punya versi.
+ *
+ * Tanpa ini, dokumen demo mengaku berversi 1 tetapi riwayat versinya kosong dan
+ * tidak ada yang bisa diunduh — keadaan yang tidak mungkin terjadi lewat
+ * aplikasi. Isinya PDF minimal, hanya agar ada objek nyata di R2.
+ */
+type VersiDemo = { id: string; dokumenId: string; kunci: string; nama: string };
+
+const VERSI: VersiDemo[] = DOKUMEN.filter((d) => d.versiTerkini > 0).map((d, i) => ({
+  id: `ver-demo-${i + 1}`,
+  dokumenId: d.id,
+  kunci: `dokumen/${d.id}/versi-1.pdf`,
+  nama: `${d.nomor.replaceAll("/", "-")}-v1.pdf`,
+}));
+
+const isiPdfDemo = (dokumen: DokumenDemo) =>
+  `%PDF-1.4\n% Berkas contoh untuk ${dokumen.nomor} — ${dokumen.judul}\n`;
+
 function kutip(nilai: string): string {
   return `'${nilai.replaceAll("'", "''")}'`;
 }
@@ -474,6 +593,29 @@ async function main() {
     );
   }
 
+  // Dokumen merujuk unit kerja, jadi dimuat setelahnya.
+  for (const d of DOKUMEN) {
+    baris.push(
+      upsert("dokumen", {
+        id: d.id,
+        nomor: d.nomor,
+        urut: d.urut,
+        tahun: d.tahun,
+        judul: d.judul,
+        judul_en: d.judulEn,
+        kategori: d.kategori,
+        unit_kerja_id: d.unitKerjaId,
+        status: d.status,
+        versi_terkini: d.versiTerkini,
+        tanggal_tinjau_ulang:
+          d.tinjauUlangHari === null ? null : hariDariSekarang(d.tinjauUlangHari),
+        aktif: 1,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+  }
+
   for (const akun of AKUN) {
     const tempat = PENEMPATAN[akun.id];
     const perusahaan = PENAUTAN_TENANT[akun.id];
@@ -501,6 +643,32 @@ async function main() {
         password: sandi,
         created_at: sekarang,
         updated_at: sekarang,
+      }),
+    );
+  }
+
+  // Versi dokumen merujuk akun pengunggah, jadi dimuat setelah tabel users.
+  //
+  // Riwayat versi dokumen demo dikembalikan ke keadaan awal lebih dulu. Tanpa
+  // ini, revisi yang dibuat saat mencoba aplikasi akan menumpuk dan membuat
+  // `versi_terkini` tidak lagi cocok dengan riwayatnya.
+  baris.push(
+    `DELETE FROM versi_dokumen WHERE dokumen_id IN (${DOKUMEN.map((d) => kutip(d.id)).join(", ")});`,
+  );
+  for (const v of VERSI) {
+    const induk = DOKUMEN.find((d) => d.id === v.dokumenId)!;
+    baris.push(
+      upsert("versi_dokumen", {
+        id: v.id,
+        dokumen_id: v.dokumenId,
+        versi: 1,
+        kunci_r2: v.kunci,
+        nama_berkas: v.nama,
+        ukuran: Buffer.byteLength(isiPdfDemo(induk), "utf8"),
+        tipe_mime: "application/pdf",
+        catatan_revisi: "Terbitan pertama",
+        diunggah_oleh: "demo-admin",
+        created_at: sekarang,
       }),
     );
   }
@@ -535,9 +703,35 @@ async function main() {
 
   execFileSync("npx", argumen, { stdio: "inherit" });
 
+  // Objek R2 untuk tiap versi dokumen demo, supaya tombol unduh benar-benar
+  // menghasilkan berkas dan bukan galat "tidak ditemukan".
+  const wadah = mkdtempSync(join(tmpdir(), "ki-seed-berkas-"));
+  for (const v of VERSI) {
+    const induk = DOKUMEN.find((d) => d.id === v.dokumenId)!;
+    const jalur = join(wadah, v.nama);
+    writeFileSync(jalur, isiPdfDemo(induk), "utf8");
+
+    execFileSync(
+      "npx",
+      [
+        "wrangler",
+        "r2",
+        "object",
+        "put",
+        `ki-berkas/${v.kunci}`,
+        remote ? "--remote" : "--local",
+        `--file=${jalur}`,
+        "--content-type=application/pdf",
+      ],
+      { stdio: "inherit" },
+    );
+  }
+
   console.log(
     `\nSelesai. ${UNIT_KERJA.length} unit kerja, ${JABATAN.length} jabatan, ${KAVLING.length} kavling, ` +
-      `${TENANT.length} tenant, ${KONTRAK.length} kontrak, ${AKUN.length} akun demo, dan ${PENGATURAN.length} pengaturan dimuat.`,
+      `${TENANT.length} tenant, ${KONTRAK.length} kontrak, ${DOKUMEN.length} dokumen ` +
+      `(${VERSI.length} berkas versi), ${AKUN.length} akun demo, dan ` +
+      `${PENGATURAN.length} pengaturan dimuat.`,
   );
   console.log(`Kata sandi seluruh akun demo: ${KATA_SANDI_DEMO}`);
   for (const akun of AKUN) console.log(`  - ${akun.surel} (${akun.peran})`);

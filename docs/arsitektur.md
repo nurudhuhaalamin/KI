@@ -90,7 +90,7 @@ Nomor Bagian merujuk proposal sumber yang menjadi acuan cakupan.
 | --- | ------------------------------------------------------------------------ | ------------- | --------------------------------------- |
 | —   | Kerangka teknis & alat verifikasi                                        | —             | **selesai**                             |
 | A   | Fondasi: pengguna, peran, unit kerja, jabatan, jejak audit, konfigurasi  | II            | **selesai**                             |
-| B   | Kavling, tenant & kontrak                                                | IV.3, IV.4    | belum                                   |
+| B   | Kavling, tenant & kontrak, portal tenant                                 | IV.3, IV.4    | **selesai**                             |
 | C   | Pengendalian dokumen: daftar induk, penomoran, versi, pengesahan         | XI.1          | belum                                   |
 | D   | Perizinan satu pintu: formulir dinamis, persetujuan berjenjang, SLA      | IV.1, IV.2    | belum                                   |
 | E   | RKL-RPL Rinci: tim pemeriksa, verifikasi 3+10 hari, PKPLH PU, pemantauan | V.7–V.9       | belum                                   |

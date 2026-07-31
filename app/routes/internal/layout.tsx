@@ -24,6 +24,7 @@ const KELOMPOK_MENU: { kunci: string; butir: ButirMenu[] }[] = [
       { ke: "/internal/kavling", kunci: "kavling", peran: ["admin", "manajemen", "staf"] },
       { ke: "/internal/tenant", kunci: "tenant", peran: ["admin", "manajemen", "staf"] },
       { ke: "/internal/kontrak", kunci: "kontrak", peran: ["admin", "manajemen"] },
+      { ke: "/internal/dokumen", kunci: "dokumen", peran: ["admin", "manajemen", "staf"] },
     ],
   },
   {

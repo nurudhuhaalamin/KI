@@ -321,7 +321,7 @@ export default function UbahKontrak({ loaderData, actionData }: Route.ComponentP
                   </Sel>
                   <Sel>
                     <a
-                      href={`/internal/berkas/${l.id}`}
+                      href={`/internal/berkas/lampiran-kontrak/${l.id}`}
                       className="text-sky-700 underline dark:text-sky-400"
                       data-testid={`unduh-${l.id}`}
                     >

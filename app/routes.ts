@@ -25,11 +25,13 @@ export default [
       route("kontrak/:id", "routes/internal/kontrak/ubah.tsx"),
       route("pengguna", "routes/internal/pengguna/daftar.tsx"),
       route("pengguna/:id", "routes/internal/pengguna/ubah.tsx"),
+      route("dokumen", "routes/internal/dokumen/daftar.tsx"),
+      route("dokumen/:id", "routes/internal/dokumen/ubah.tsx"),
       route("pengaturan", "routes/internal/pengaturan.tsx"),
       route("jejak-audit", "routes/internal/jejak-audit.tsx"),
     ]),
     // Di luar tata letak internal: mengembalikan berkas, bukan halaman.
-    route("berkas/:id", "routes/internal/berkas.tsx"),
+    route("berkas/:jenis/:id", "routes/internal/berkas.tsx"),
   ]),
 
   // Portal perusahaan penyewa

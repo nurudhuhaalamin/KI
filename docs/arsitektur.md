@@ -145,6 +145,41 @@ npm run deploy
 Setelah itu isi data awal kawasan (profil, unit kerja, akun administrator) lewat
 antarmuka. Jangan memakai `npm run db:seed` di produksi — isinya akun demo.
 
+### Urutan deploy tidak boleh dibalik
+
+`wrangler.jsonc` di akar repo adalah konfigurasi **sumber**, bukan yang dipakai
+saat deploy. `npm run build` menghasilkan konfigurasi turunan di
+`build/server/wrangler.json`, dan `wrangler deploy` diarahkan ke sana lewat
+`.wrangler/deploy/config.json` yang dibuat plugin Vite.
+
+Akibatnya `wrangler deploy` **selalu** harus didahului `npm run build`. Menjalankan
+`wrangler deploy` pada repo yang baru di-clone akan gagal dengan pesan
+*"the redirected configuration path … does not exist"*. Gunakan `npm run deploy`
+yang sudah menggabungkan keduanya.
+
+### Cloudflare Workers Builds (integrasi Git)
+
+Bila kawasan memakai Workers Builds agar setiap push otomatis ter-deploy, atur di
+dasbor Cloudflare:
+
+| Pengaturan | Nilai |
+|---|---|
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+
+Sebelum build pertama bisa berhasil, sumber daya berikut harus sudah ada di akun:
+
+1. Database D1 sudah dibuat dan `database_id`-nya **sudah ditulis** di
+   `wrangler.jsonc` — nilai bawaan di repo ini masih penanda
+   `00000000-0000-0000-0000-000000000000` dan pasti menggagalkan deploy.
+2. Bucket R2 sudah dibuat dengan nama yang sama seperti di `wrangler.jsonc`.
+3. `BETTER_AUTH_SECRET` sudah dipasang lewat `wrangler secret put`.
+4. Akun berada pada paket **Workers Paid** agar batas D1 menjadi 10 GB.
+
+Alur GitHub Actions di `.github/workflows/ci.yml` melakukan urutan ini dengan
+benar dan melewati langkah deploy selama secret Cloudflare belum diatur, sehingga
+pemeriksaan mutu tetap berjalan sebelum akun disiapkan.
+
 ## Keputusan yang masih terbuka
 
 Ditunda sampai modul yang membutuhkannya dikerjakan, agar tidak menebak terlalu dini:

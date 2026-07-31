@@ -6,6 +6,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
 
+  // CATATAN DEPLOY. Berkas ini adalah konfigurasi sumber, bukan yang dipakai
+  // saat deploy. `npm run build` menghasilkan konfigurasi turunan di
+  // build/server/wrangler.json, dan `wrangler deploy` diarahkan ke sana lewat
+  // .wrangler/deploy/config.json. Akibatnya `wrangler deploy` SELALU harus
+  // didahului `npm run build` — pakai `npm run deploy` yang sudah menyatukan
+  // keduanya. Lihat docs/arsitektur.md untuk pengaturan Cloudflare Workers Builds.
+
   // Aset statis hasil build (JS, CSS, gambar).
   "assets": {
     "directory": "./build/client",

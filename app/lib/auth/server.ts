@@ -47,6 +47,13 @@ export function buatAuth(env: Env, request: Request) {
           defaultValue: true,
           input: false,
         },
+        // Penautan ke perusahaan untuk pengguna berperan tenant. Portal tenant
+        // menyaring seluruh datanya dengan nilai ini.
+        tenantId: {
+          type: "string",
+          required: false,
+          input: false,
+        },
       },
     },
     session: {

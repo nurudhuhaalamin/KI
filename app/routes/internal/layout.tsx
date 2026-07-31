@@ -19,6 +19,14 @@ type ButirMenu = { ke: string; kunci: string; peran: readonly Peran[] };
 
 const KELOMPOK_MENU: { kunci: string; butir: ButirMenu[] }[] = [
   {
+    kunci: "kelolaKawasan",
+    butir: [
+      { ke: "/internal/kavling", kunci: "kavling", peran: ["admin", "manajemen", "staf"] },
+      { ke: "/internal/tenant", kunci: "tenant", peran: ["admin", "manajemen", "staf"] },
+      { ke: "/internal/kontrak", kunci: "kontrak", peran: ["admin", "manajemen"] },
+    ],
+  },
+  {
     kunci: "kelolaOrganisasi",
     butir: [
       { ke: "/internal/unit-kerja", kunci: "unitKerja", peran: ["admin", "manajemen", "staf"] },

@@ -47,6 +47,11 @@ const PENGATURAN: { kunci: string; nilai: string; keterangan: string }[] = [
   { kunci: "kawasan.kontak_surel", nilai: "info@contoh.test", keterangan: "Surel kontak" },
   { kunci: "kawasan.kontak_telepon", nilai: "0401-000000", keterangan: "Telepon kontak" },
   { kunci: "kawasan.locale_bawaan", nilai: "id", keterangan: "Bahasa bawaan antarmuka" },
+  {
+    kunci: "perizinan.hari_libur",
+    nilai: "2026-08-17, 2026-12-25",
+    keterangan: "Hari libur yang tidak dihitung sebagai hari kerja pada tenggat perizinan",
+  },
 ];
 
 type UnitDemo = {
@@ -468,6 +473,205 @@ const VERSI: VersiDemo[] = DOKUMEN.filter((d) => d.versiTerkini > 0).map((d, i) 
 const isiPdfDemo = (dokumen: DokumenDemo) =>
   `%PDF-1.4\n% Berkas contoh untuk ${dokumen.nomor} — ${dokumen.judul}\n`;
 
+// Tiga jenis izin dengan kebutuhan yang sengaja berbeda: yang satu satu tahap,
+// yang lain berjenjang sampai manajemen, dan kolom formulirnya tidak sama —
+// itulah yang membuktikan bentuk formulir memang ditentukan data.
+type JenisIzinDemo = {
+  id: string;
+  kode: string;
+  nama: string;
+  namaEn: string;
+  unitKerjaId: string | null;
+  slaHari: number;
+  urutan: number;
+  kolom: {
+    nama: string;
+    label: string;
+    labelEn: string;
+    tipe: string;
+    wajib: boolean;
+    pilihan?: string[];
+  }[];
+  tahap: { nama: string; namaEn: string; peran: "staf" | "manajemen" | "admin" }[];
+};
+
+const JENIS_IZIN: JenisIzinDemo[] = [
+  {
+    id: "jzn-demo-kerja",
+    kode: "IK",
+    nama: "Izin Kerja Harian",
+    namaEn: "Daily Work Permit",
+    unitKerjaId: "unit-lk3",
+    slaHari: 1,
+    urutan: 1,
+    kolom: [
+      {
+        nama: "lokasi_kerja",
+        label: "Lokasi pekerjaan",
+        labelEn: "Work location",
+        tipe: "teks",
+        wajib: true,
+      },
+      {
+        nama: "jumlah_pekerja",
+        label: "Jumlah pekerja",
+        labelEn: "Number of workers",
+        tipe: "angka",
+        wajib: true,
+      },
+      {
+        nama: "tanggal_mulai",
+        label: "Tanggal mulai",
+        labelEn: "Start date",
+        tipe: "tanggal",
+        wajib: true,
+      },
+      {
+        nama: "risiko",
+        label: "Tingkat risiko",
+        labelEn: "Risk level",
+        tipe: "pilihan",
+        wajib: true,
+        pilihan: ["rendah", "sedang", "tinggi"],
+      },
+    ],
+    tahap: [{ nama: "Pemeriksaan K3", namaEn: "OHS review", peran: "staf" }],
+  },
+  {
+    id: "jzn-demo-bangun",
+    kode: "IB",
+    nama: "Izin Mendirikan Bangunan Kavling",
+    namaEn: "Plot Building Permit",
+    unitKerjaId: "unit-ops",
+    slaHari: 10,
+    urutan: 2,
+    kolom: [
+      {
+        nama: "kontraktor",
+        label: "Nama kontraktor",
+        labelEn: "Contractor name",
+        tipe: "teks",
+        wajib: true,
+      },
+      {
+        nama: "luas_bangunan",
+        label: "Luas bangunan (m²)",
+        labelEn: "Building area (sqm)",
+        tipe: "angka",
+        wajib: true,
+      },
+      {
+        nama: "uraian",
+        label: "Uraian pekerjaan",
+        labelEn: "Scope of work",
+        tipe: "teks-panjang",
+        wajib: false,
+      },
+    ],
+    tahap: [
+      { nama: "Verifikasi teknis", namaEn: "Technical verification", peran: "staf" },
+      { nama: "Persetujuan manajemen", namaEn: "Management approval", peran: "manajemen" },
+    ],
+  },
+  {
+    id: "jzn-demo-alat",
+    kode: "IAB",
+    nama: "Izin Masuk Alat Berat",
+    namaEn: "Heavy Equipment Entry Permit",
+    unitKerjaId: "unit-ops",
+    slaHari: 2,
+    urutan: 3,
+    kolom: [
+      {
+        nama: "jenis_alat",
+        label: "Jenis alat berat",
+        labelEn: "Equipment type",
+        tipe: "teks",
+        wajib: true,
+      },
+      {
+        nama: "nomor_polisi",
+        label: "Nomor polisi",
+        labelEn: "Vehicle registration",
+        tipe: "teks",
+        wajib: true,
+      },
+    ],
+    tahap: [{ nama: "Pemeriksaan keamanan", namaEn: "Security check", peran: "staf" }],
+  },
+];
+
+type PermohonanDemo = {
+  id: string;
+  jenisIzinId: string;
+  urut: number;
+  judul: string;
+  status: "draf" | "diajukan" | "diproses" | "perlu-revisi" | "terbit" | "ditolak" | "batal";
+  tahapAktif: number;
+  isian: Record<string, string>;
+  /** Hari relatif terhadap hari ini; null berarti belum diajukan. */
+  diajukanHari: number | null;
+  tenggatHari: number | null;
+};
+
+// Empat permohonan pada keadaan berbeda. Satu sudah lewat tenggat supaya
+// peringatan di dasbor langsung terlihat setelah seed.
+const PERMOHONAN: PermohonanDemo[] = [
+  {
+    id: "pmh-demo-1",
+    jenisIzinId: "jzn-demo-kerja",
+    urut: 1,
+    judul: "Perbaikan atap gudang B",
+    status: "diajukan",
+    tahapAktif: 1,
+    isian: {
+      lokasi_kerja: "Gudang B, Kavling A-02",
+      jumlah_pekerja: "6",
+      tanggal_mulai: "2026-08-10",
+      risiko: "sedang",
+    },
+    diajukanHari: -6,
+    tenggatHari: -4,
+  },
+  {
+    id: "pmh-demo-2",
+    jenisIzinId: "jzn-demo-bangun",
+    urut: 1,
+    judul: "Pembangunan gudang tahap dua",
+    status: "diproses",
+    tahapAktif: 2,
+    isian: {
+      kontraktor: "PT Bangun Sentosa",
+      luas_bangunan: "1250",
+      uraian: "Perluasan gudang produksi beserta area bongkar muat.",
+    },
+    diajukanHari: -3,
+    tenggatHari: 7,
+  },
+  {
+    id: "pmh-demo-3",
+    jenisIzinId: "jzn-demo-alat",
+    urut: 1,
+    judul: "Masuk excavator untuk pematangan lahan",
+    status: "terbit",
+    tahapAktif: 1,
+    isian: { jenis_alat: "Excavator 20 ton", nomor_polisi: "DT 8123 XX" },
+    diajukanHari: -20,
+    tenggatHari: -18,
+  },
+  {
+    id: "pmh-demo-4",
+    jenisIzinId: "jzn-demo-kerja",
+    urut: 2,
+    judul: "Pengelasan pipa utilitas",
+    status: "draf",
+    tahapAktif: 0,
+    isian: { lokasi_kerja: "Koridor utilitas timur", jumlah_pekerja: "3" },
+    diajukanHari: null,
+    tenggatHari: null,
+  },
+];
+
 function kutip(nilai: string): string {
   return `'${nilai.replaceAll("'", "''")}'`;
 }
@@ -647,6 +851,68 @@ async function main() {
     );
   }
 
+  // Perizinan: jenis izin dan tahapnya lebih dulu, baru permohonan yang
+  // merujuk keduanya beserta akun pemohon.
+  for (const j of JENIS_IZIN) {
+    baris.push(
+      upsert("jenis_izin", {
+        id: j.id,
+        kode: j.kode,
+        nama: j.nama,
+        nama_en: j.namaEn,
+        keterangan: null,
+        unit_kerja_id: j.unitKerjaId,
+        sla_hari: j.slaHari,
+        definisi_kolom: JSON.stringify(j.kolom),
+        urutan: j.urutan,
+        aktif: 1,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+
+    // Tahap dibuat ulang tiap seed supaya urutannya tidak menumpuk.
+    baris.push(`DELETE FROM tahap_persetujuan WHERE jenis_izin_id = ${kutip(j.id)};`);
+    for (const [indeks, t] of j.tahap.entries()) {
+      baris.push(
+        upsert("tahap_persetujuan", {
+          id: `${j.id}-tahap-${indeks + 1}`,
+          jenis_izin_id: j.id,
+          urutan: indeks + 1,
+          nama: t.nama,
+          nama_en: t.namaEn,
+          peran_pemutus: t.peran,
+          unit_kerja_id: null,
+          created_at: sekarang,
+        }),
+      );
+    }
+  }
+
+  for (const p of PERMOHONAN) {
+    const jenis = JENIS_IZIN.find((j) => j.id === p.jenisIzinId)!;
+    baris.push(
+      upsert("permohonan", {
+        id: p.id,
+        nomor: `${jenis.kode}/${String(p.urut).padStart(3, "0")}/2026`,
+        urut: p.urut,
+        tahun: 2026,
+        jenis_izin_id: p.jenisIzinId,
+        tenant_id: "ten-demo-1",
+        diajukan_oleh: "demo-tenant",
+        judul: p.judul,
+        isian: JSON.stringify(p.isian),
+        status: p.status,
+        tahap_aktif: p.tahapAktif,
+        tanggal_diajukan: p.diajukanHari === null ? null : hariDariSekarang(p.diajukanHari),
+        tenggat: p.tenggatHari === null ? null : hariDariSekarang(p.tenggatHari),
+        tanggal_selesai: p.status === "terbit" ? hariDariSekarang(-18) : null,
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+  }
+
   // Versi dokumen merujuk akun pengunggah, jadi dimuat setelah tabel users.
   //
   // Riwayat versi dokumen demo dikembalikan ke keadaan awal lebih dulu. Tanpa
@@ -730,7 +996,8 @@ async function main() {
   console.log(
     `\nSelesai. ${UNIT_KERJA.length} unit kerja, ${JABATAN.length} jabatan, ${KAVLING.length} kavling, ` +
       `${TENANT.length} tenant, ${KONTRAK.length} kontrak, ${DOKUMEN.length} dokumen ` +
-      `(${VERSI.length} berkas versi), ${AKUN.length} akun demo, dan ` +
+      `(${VERSI.length} berkas versi), ${JENIS_IZIN.length} jenis izin, ` +
+      `${PERMOHONAN.length} permohonan, ${AKUN.length} akun demo, dan ` +
       `${PENGATURAN.length} pengaturan dimuat.`,
   );
   console.log(`Kata sandi seluruh akun demo: ${KATA_SANDI_DEMO}`);

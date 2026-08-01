@@ -8,6 +8,8 @@ import { users } from "~/lib/db/schema/auth";
 import { dokumen } from "~/lib/db/schema/dokumen";
 import { jabatan, unitKerja } from "~/lib/db/schema/organisasi";
 import { dokumenJatuhTempo } from "~/modules/dokumen/penomoran";
+import { bacaPengaturanPerizinan, daftarPermohonan } from "~/modules/perizinan/query";
+import { permohonanMendesak } from "~/modules/perizinan/sla";
 import { useDataRoot } from "~/root";
 
 import type { Route } from "./+types/dasbor";
@@ -20,10 +22,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Tenant belum punya modul apa pun; jangan bebani database dengan hitungan
   // yang tidak akan ditampilkan kepadanya.
   if (pengguna.peran === "tenant") {
-    return { nama: pengguna.nama, peran: pengguna.peran, ringkasan: null, jatuhTempo: [] };
+    return {
+      nama: pengguna.nama,
+      peran: pengguna.peran,
+      ringkasan: null,
+      jatuhTempo: [],
+      mendesak: [],
+    };
   }
 
-  const [jumlahUnit, jumlahJabatan, jumlahPengguna, semuaDokumen] = await Promise.all([
+  const [
+    jumlahUnit,
+    jumlahJabatan,
+    jumlahPengguna,
+    semuaDokumen,
+    semuaPermohonan,
+    { hariLibur },
+  ] = await Promise.all([
     db.select({ n: count() }).from(unitKerja).where(eq(unitKerja.aktif, true)),
     db.select({ n: count() }).from(jabatan).where(eq(jabatan.aktif, true)),
     db
@@ -39,6 +54,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         status: dokumen.status,
       })
       .from(dokumen),
+    daftarPermohonan(db),
+    bacaPengaturanPerizinan(db),
   ]);
 
   return {
@@ -51,6 +68,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     },
     // Pengingat tinjau ulang dokumen; kosong bila tidak ada yang jatuh tempo.
     jatuhTempo: dokumenJatuhTempo(semuaDokumen).slice(0, 5),
+    // Permohonan izin yang tenggatnya sudah atau hampir terlewat.
+    mendesak: permohonanMendesak(semuaPermohonan, new Date(), hariLibur).slice(0, 5),
   };
 }
 
@@ -123,6 +142,33 @@ export default function Dasbor({ loaderData }: Route.ComponentProps) {
                   data-testid={`jatuh-tempo-${d.id}`}
                 >
                   <code className="text-xs">{d.nomor}</code> — {d.judul}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {loaderData.mendesak.length > 0 ? (
+        <section
+          className="rounded-md border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+          data-testid="kartu-mendesak"
+        >
+          <h2 className="font-medium text-rose-900 dark:text-rose-100">
+            {t.perizinan.mendesak}
+          </h2>
+          <p className="mt-1 text-sm text-rose-800 dark:text-rose-200">
+            {t.perizinan.mendesakKeterangan}
+          </p>
+          <ul className="mt-3 flex flex-col gap-1">
+            {loaderData.mendesak.map((p) => (
+              <li key={p.id} className="text-sm">
+                <Link
+                  to={`/internal/permohonan/${p.id}`}
+                  className="text-rose-900 underline dark:text-rose-100"
+                  data-testid={`mendesak-${p.id}`}
+                >
+                  <code className="text-xs">{p.nomor}</code> — {p.judul}
                 </Link>
               </li>
             ))}

@@ -4,9 +4,10 @@ import type { PenggunaSesi } from "../auth/sesi";
 import type { Db } from "../db";
 import { versiDokumen } from "../db/schema/dokumen";
 import { kontrak, lampiranKontrak } from "../db/schema/kontrak";
+import { berkasPermohonan, permohonan } from "../db/schema/perizinan";
 import { ambilBerkas } from "./r2";
 
-export const JENIS_BERKAS = ["lampiran-kontrak", "versi-dokumen"] as const;
+export const JENIS_BERKAS = ["lampiran-kontrak", "versi-dokumen", "berkas-permohonan"] as const;
 export type JenisBerkas = (typeof JENIS_BERKAS)[number];
 
 export function adalahJenisBerkas(nilai: string): nilai is JenisBerkas {
@@ -19,6 +20,15 @@ type BerkasTerdaftar = {
   tipeMime: string;
   /** Perusahaan pemilik, bila berkas ini terikat pada satu tenant. */
   tenantId: string | null;
+  /**
+   * Apakah staf pengelola boleh membukanya walau berkas ini milik tenant.
+   *
+   * Dibedakan per jenis berkas karena kepekaannya memang berbeda: lampiran
+   * kontrak memuat nilai komersial yang bukan urusan staf, sedangkan lampiran
+   * permohonan izin justru HARUS dibaca staf — dialah yang memeriksanya pada
+   * tahap pertama. Satu aturan seragam akan salah pada salah satu di antaranya.
+   */
+  bolehStaf: boolean;
 };
 
 /**
@@ -31,7 +41,8 @@ type BerkasTerdaftar = {
  *
  * Aturannya:
  * - admin dan manajemen boleh mengunduh berkas mana pun;
- * - staf boleh mengunduh berkas yang tidak terikat tenant (mis. dokumen kawasan);
+ * - staf boleh mengunduh berkas yang tidak terikat tenant (mis. dokumen kawasan)
+ *   dan berkas tenant yang memang menjadi bahan kerjanya (lampiran permohonan);
  * - pengguna tenant hanya boleh mengunduh berkas milik perusahaannya sendiri;
  * - selain itu `null` — pemanggil menjawabnya 404, bukan 403, supaya keberadaan
  *   berkas milik pihak lain tidak bisa disimpulkan dari kode statusnya.
@@ -63,8 +74,8 @@ function bolehMengunduh(pengguna: PenggunaSesi, berkas: BerkasTerdaftar): boolea
     return berkas.tenantId !== null && berkas.tenantId === pengguna.tenantId;
   }
 
-  // Staf pengelola: hanya berkas yang bukan milik satu tenant tertentu.
-  return pengguna.peran === "staf" && berkas.tenantId === null;
+  // Staf pengelola: berkas kawasan, atau berkas tenant yang memang bahan kerjanya.
+  return pengguna.peran === "staf" && (berkas.tenantId === null || berkas.bolehStaf);
 }
 
 async function cariBerkas(
@@ -84,7 +95,25 @@ async function cariBerkas(
       .innerJoin(kontrak, eq(lampiranKontrak.kontrakId, kontrak.id))
       .where(eq(lampiranKontrak.id, id))
       .limit(1);
-    return baris ?? null;
+    // Lampiran kontrak memuat nilai komersial; bukan bahan kerja staf.
+    return baris ? { ...baris, bolehStaf: false } : null;
+  }
+
+  if (jenis === "berkas-permohonan") {
+    // Lampiran permohonan milik perusahaan yang mengajukannya.
+    const [baris] = await db
+      .select({
+        kunciR2: berkasPermohonan.kunciR2,
+        namaBerkas: berkasPermohonan.namaBerkas,
+        tipeMime: berkasPermohonan.tipeMime,
+        tenantId: permohonan.tenantId,
+      })
+      .from(berkasPermohonan)
+      .innerJoin(permohonan, eq(berkasPermohonan.permohonanId, permohonan.id))
+      .where(eq(berkasPermohonan.id, id))
+      .limit(1);
+    // Justru staf yang memeriksanya pada tahap pertama persetujuan.
+    return baris ? { ...baris, bolehStaf: true } : null;
   }
 
   // Dokumen kawasan tidak terikat tenant mana pun.
@@ -98,5 +127,5 @@ async function cariBerkas(
     .where(eq(versiDokumen.id, id))
     .limit(1);
 
-  return baris ? { ...baris, tenantId: null } : null;
+  return baris ? { ...baris, tenantId: null, bolehStaf: true } : null;
 }

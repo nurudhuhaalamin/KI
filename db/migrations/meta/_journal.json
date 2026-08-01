@@ -29,6 +29,13 @@
       "when": 1785527293358,
       "tag": "0003_dokumen",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785563798943,
+      "tag": "0004_perizinan",
+      "breakpoints": true
     }
   ]
 }

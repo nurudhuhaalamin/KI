@@ -1,6 +1,16 @@
 import type { KategoriDokumen, StatusDokumen } from "~/lib/db/schema/dokumen";
+import {
+  susunNomor as susunNomorUmum,
+  urutBerikutnya as urutBerikutnyaUmum,
+} from "~/lib/penomoran";
 
-/** Pola bawaan bila kawasan belum mengaturnya sendiri. */
+/**
+ * Pola bawaan bila kawasan belum mengaturnya sendiri.
+ *
+ * Tetap memakai `{kategori}`, bukan `{seri}` milik penomoran umum: pola ini
+ * sudah tersimpan di tabel `pengaturan` pada instans yang berjalan, dan
+ * penomoran umum memang mengenali keduanya.
+ */
 export const POLA_BAWAAN = "{kategori}/{unit}/{urut}/{tahun}";
 
 /** Singkatan kategori yang dipakai di dalam nomor dokumen. */
@@ -25,46 +35,29 @@ export type BagianNomor = {
 /**
  * Menyusun nomor dokumen dari pola.
  *
- * Placeholder yang dikenal: {kategori} {unit} {urut} {tahun}. Nomor urut
- * selalu tiga digit agar pengurutan menurut teks tetap benar (001, 002, … 010).
- * Placeholder {unit} yang tidak punya nilai dibuang beserta pemisahnya, supaya
- * tidak menyisakan garis miring ganda.
+ * Penyusunannya dikerjakan penomoran umum di `~/lib/penomoran`; yang khas
+ * dokumen hanyalah penerjemahan kategori menjadi singkatannya.
  */
 export function susunNomor(pola: string, bagian: BagianNomor): string {
-  const nilai: Record<string, string> = {
-    kategori: SINGKATAN_KATEGORI[bagian.kategori],
-    unit: bagian.kodeUnit?.trim() ?? "",
-    urut: String(bagian.urut).padStart(3, "0"),
-    tahun: String(bagian.tahun),
-  };
-
-  const terisi = pola.replace(/\{(\w+)\}/g, (cocok, kunci: string) =>
-    kunci in nilai ? nilai[kunci]! : cocok,
-  );
-
-  // Rapikan bekas placeholder kosong: "TK//001/2026" -> "TK/001/2026".
-  return terisi
-    .replace(/\/{2,}/g, "/")
-    .replace(/^\/+|\/+$/g, "")
-    .trim();
+  return susunNomorUmum(pola, {
+    seri: SINGKATAN_KATEGORI[bagian.kategori],
+    kodeUnit: bagian.kodeUnit,
+    urut: bagian.urut,
+    tahun: bagian.tahun,
+  });
 }
 
-/**
- * Menentukan nomor urut berikutnya untuk satu kategori pada satu tahun.
- *
- * Memakai nilai tertinggi + 1, bukan jumlah baris. Dokumen yang ditarik atau
- * dihapus meninggalkan lompatan nomor, dan lompatan itu memang harus dibiarkan:
- * memakai ulang nomor yang pernah terbit akan membuat arsip dan surat yang
- * sudah beredar merujuk ke dokumen yang salah.
- */
+/** Nomor urut berikutnya untuk satu kategori dokumen pada satu tahun. */
 export function urutBerikutnya(
   terpakai: readonly { kategori: KategoriDokumen; tahun: number; urut: number }[],
   kategori: KategoriDokumen,
   tahun: number,
 ): number {
-  const sekelompok = terpakai.filter((d) => d.kategori === kategori && d.tahun === tahun);
-  if (sekelompok.length === 0) return 1;
-  return Math.max(...sekelompok.map((d) => d.urut)) + 1;
+  return urutBerikutnyaUmum(
+    terpakai.map((d) => ({ seri: d.kategori, tahun: d.tahun, urut: d.urut })),
+    kategori,
+    tahun,
+  );
 }
 
 export type GalatDokumen =

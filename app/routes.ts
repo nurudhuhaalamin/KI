@@ -27,6 +27,10 @@ export default [
       route("pengguna/:id", "routes/internal/pengguna/ubah.tsx"),
       route("dokumen", "routes/internal/dokumen/daftar.tsx"),
       route("dokumen/:id", "routes/internal/dokumen/ubah.tsx"),
+      route("jenis-izin", "routes/internal/jenis-izin/daftar.tsx"),
+      route("jenis-izin/:id", "routes/internal/jenis-izin/ubah.tsx"),
+      route("permohonan", "routes/internal/permohonan/daftar.tsx"),
+      route("permohonan/:id", "routes/internal/permohonan/ubah.tsx"),
       route("pengaturan", "routes/internal/pengaturan.tsx"),
       route("jejak-audit", "routes/internal/jejak-audit.tsx"),
     ]),
@@ -36,6 +40,11 @@ export default [
 
   // Portal perusahaan penyewa
   ...prefix("portal", [
-    layout("routes/tenant/layout.tsx", [index("routes/tenant/beranda.tsx")]),
+    layout("routes/tenant/layout.tsx", [
+      index("routes/tenant/beranda.tsx"),
+      route("permohonan", "routes/tenant/permohonan/daftar.tsx"),
+      route("permohonan/baru", "routes/tenant/permohonan/baru.tsx"),
+      route("permohonan/:id", "routes/tenant/permohonan/rincian.tsx"),
+    ]),
   ]),
 ] satisfies RouteConfig;

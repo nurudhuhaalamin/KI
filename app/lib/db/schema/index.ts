@@ -3,5 +3,6 @@ export * from "./dokumen";
 export * from "./kavling";
 export * from "./kontrak";
 export * from "./organisasi";
+export * from "./perizinan";
 export * from "./sistem";
 export * from "./tenant";

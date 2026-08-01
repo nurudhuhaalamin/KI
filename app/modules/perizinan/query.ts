@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 
 import type { Db } from "~/lib/db";
 import { users } from "~/lib/db/schema/auth";
@@ -16,30 +16,25 @@ import {
 import { pengaturan } from "~/lib/db/schema/sistem";
 import { tenant } from "~/lib/db/schema/tenant";
 import { POLA_BAWAAN, susunNomor, urutBerikutnya } from "~/lib/penomoran";
-
-import { bacaHariLibur, hitungTenggat } from "./sla";
+import { hitungTenggat } from "~/lib/waktu-kerja";
+import { bacaKalenderLibur } from "~/lib/waktu-kerja/pengaturan";
 
 function buatId(awalan: string): string {
   return `${awalan}_${crypto.randomUUID().replaceAll("-", "").slice(0, 20)}`;
 }
 
 export const KUNCI_POLA_NOMOR = "perizinan.pola_nomor";
-export const KUNCI_HARI_LIBUR = "perizinan.hari_libur";
 
-/** Membaca dua pengaturan sekaligus supaya tidak dua kali jalan ke database. */
+/** Pola nomor dan kalender libur sekaligus, agar tidak dua kali jalan ke database. */
 export async function bacaPengaturanPerizinan(
   db: Db,
 ): Promise<{ pola: string; hariLibur: string[] }> {
-  const baris = await db
-    .select()
-    .from(pengaturan)
-    .where(inArray(pengaturan.kunci, [KUNCI_POLA_NOMOR, KUNCI_HARI_LIBUR]));
+  const [baris, hariLibur] = await Promise.all([
+    db.select().from(pengaturan).where(eq(pengaturan.kunci, KUNCI_POLA_NOMOR)).limit(1),
+    bacaKalenderLibur(db),
+  ]);
 
-  const cari = (kunci: string) => baris.find((b) => b.kunci === kunci)?.nilai;
-  return {
-    pola: cari(KUNCI_POLA_NOMOR)?.trim() || POLA_BAWAAN,
-    hariLibur: bacaHariLibur(cari(KUNCI_HARI_LIBUR)),
-  };
+  return { pola: baris[0]?.nilai?.trim() || POLA_BAWAAN, hariLibur };
 }
 
 // ------------------------------------------------------------------ jenis izin

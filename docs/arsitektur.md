@@ -92,7 +92,7 @@ Nomor Bagian merujuk proposal sumber yang menjadi acuan cakupan.
 | A   | Fondasi: pengguna, peran, unit kerja, jabatan, jejak audit, konfigurasi  | II            | **selesai**                             |
 | B   | Kavling, tenant & kontrak, portal tenant                                 | IV.3, IV.4    | **selesai**                             |
 | C   | Pengendalian dokumen: daftar induk, penomoran, versi, pengesahan         | XI.1          | **selesai**                             |
-| D   | Perizinan satu pintu: formulir dinamis, persetujuan berjenjang, SLA      | IV.1, IV.2    | belum                                   |
+| D   | Perizinan satu pintu: formulir dinamis, persetujuan berjenjang, SLA      | IV.1, IV.2    | **selesai**                             |
 | E   | RKL-RPL Rinci: tim pemeriksa, verifikasi 3+10 hari, PKPLH PU, pemantauan | V.7–V.9       | belum                                   |
 | F   | Keuangan kawasan: tarif, meter, tagihan, pembayaran, tunggakan           | IV.5          | belum                                   |
 | G   | Infrastruktur & pemeliharaan: aset, jadwal, inspeksi, work order         | V.1, V.5, V.6 | belum                                   |
@@ -118,6 +118,26 @@ K → L → M → pengerasan. Modul belakangan memakai data dan pola modul di de
 6. Tambah kunci teks di `app/lib/i18n/id.ts` dan `en.ts`.
 7. Tulis test: Vitest untuk logika, Playwright untuk alur.
 8. `npm run check` dan `npm run test:e2e` harus hijau sebelum PR.
+
+Modul yang menerbitkan sesuatu bernomor memakai `app/lib/penomoran/`, bukan
+membuat penomorannya sendiri. Modul yang menyimpan berkas menambah satu cabang
+di `app/lib/berkas/akses.ts`, bukan menulis rute unduhan berikut pemeriksaan
+izinnya sendiri. Pemberitahuan lewat `kirimNotifikasi()` di `app/lib/notifikasi/`.
+
+### Menjalankan E2E
+
+Seluruh suite kini sekitar 25 menit dan berjalan satu worker karena berbagi satu
+database. Jalankan per berkas bila alat yang dipakai punya batas waktu:
+
+```
+npx playwright test e2e/modul-d-perizinan.spec.ts
+npx playwright test e2e/alur-utama.spec.ts e2e/modul-a-fondasi.spec.ts
+npx playwright test e2e/modul-b-kavling-tenant.spec.ts
+npx playwright test e2e/modul-c-dokumen.spec.ts
+```
+
+Jalankan `npm run db:seed` lebih dulu: seed mengembalikan data demo ke keadaan
+awal, dan sebagian skenario memang bertumpu padanya.
 
 ## Merilis instans untuk kawasan pembeli baru
 
@@ -188,5 +208,7 @@ Ditunda sampai modul yang membutuhkannya dikerjakan, agar tidak menebak terlalu 
   atau Browser Rendering API Cloudflare.
 - **Peta kavling**: Leaflet + OpenStreetMap, atau denah SVG dengan area klik.
 - **Payment gateway** untuk modul keuangan.
-- **Pengiriman surel**: Resend direncanakan, dipasang saat modul perizinan
-  membutuhkan notifikasi.
+- **Pengiriman surel**: Resend direncanakan. Modul D sudah menyediakan titik
+  sambungnya — seluruh pemberitahuan dibuat lewat `kirimNotifikasi()` di
+  `app/lib/notifikasi/`, jadi pemasangan surel nanti hanya menyentuh berkas itu.
+  Menunggu akun Resend, kunci API, dan domain terverifikasi milik kawasan.

@@ -4,10 +4,16 @@ import type { PenggunaSesi } from "../auth/sesi";
 import type { Db } from "../db";
 import { versiDokumen } from "../db/schema/dokumen";
 import { kontrak, lampiranKontrak } from "../db/schema/kontrak";
+import { berkasLingkungan, dokumenLingkungan } from "../db/schema/lingkungan";
 import { berkasPermohonan, permohonan } from "../db/schema/perizinan";
 import { ambilBerkas } from "./r2";
 
-export const JENIS_BERKAS = ["lampiran-kontrak", "versi-dokumen", "berkas-permohonan"] as const;
+export const JENIS_BERKAS = [
+  "lampiran-kontrak",
+  "versi-dokumen",
+  "berkas-permohonan",
+  "berkas-lingkungan",
+] as const;
 export type JenisBerkas = (typeof JENIS_BERKAS)[number];
 
 export function adalahJenisBerkas(nilai: string): nilai is JenisBerkas {
@@ -113,6 +119,26 @@ async function cariBerkas(
       .where(eq(berkasPermohonan.id, id))
       .limit(1);
     // Justru staf yang memeriksanya pada tahap pertama persetujuan.
+    return baris ? { ...baris, bolehStaf: true } : null;
+  }
+
+  if (jenis === "berkas-lingkungan") {
+    // Dokumen lingkungan dan surat keputusannya milik perusahaan pengaju.
+    const [baris] = await db
+      .select({
+        kunciR2: berkasLingkungan.kunciR2,
+        namaBerkas: berkasLingkungan.namaBerkas,
+        tipeMime: berkasLingkungan.tipeMime,
+        tenantId: dokumenLingkungan.tenantId,
+      })
+      .from(berkasLingkungan)
+      .innerJoin(
+        dokumenLingkungan,
+        eq(berkasLingkungan.dokumenLingkunganId, dokumenLingkungan.id),
+      )
+      .where(eq(berkasLingkungan.id, id))
+      .limit(1);
+    // Tim pemeriksa berisi staf; berkas inilah bahan pemeriksaannya.
     return baris ? { ...baris, bolehStaf: true } : null;
   }
 

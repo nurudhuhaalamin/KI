@@ -5,7 +5,7 @@ import { wajibMasuk } from "~/lib/auth/sesi";
 import { cloudflareContext } from "~/lib/context";
 import { buatDb } from "~/lib/db";
 import { bacaPengaturanPerizinan, daftarPermohonan } from "~/modules/perizinan/query";
-import { sisaHariKerja, statusSla } from "~/modules/perizinan/sla";
+import { sisaHariKerja, statusSla } from "~/lib/waktu-kerja";
 import { useDataRoot } from "~/root";
 
 import type { Route } from "./+types/daftar";

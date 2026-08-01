@@ -8,6 +8,9 @@ import { users } from "~/lib/db/schema/auth";
 import { dokumen } from "~/lib/db/schema/dokumen";
 import { jabatan, unitKerja } from "~/lib/db/schema/organisasi";
 import { dokumenJatuhTempo } from "~/modules/dokumen/penomoran";
+import { daftarDokumenLingkungan, laporanBerjalan } from "~/modules/lingkungan/query";
+import { laporanTertunggak } from "~/modules/lingkungan/pemantauan";
+import { lingkunganMendesak } from "~/modules/lingkungan/tahapan";
 import { bacaPengaturanPerizinan, daftarPermohonan } from "~/modules/perizinan/query";
 import { permohonanMendesak } from "~/modules/perizinan/sla";
 import { useDataRoot } from "~/root";
@@ -28,6 +31,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ringkasan: null,
       jatuhTempo: [],
       mendesak: [],
+      lingkungan: [],
+      tunggakan: [],
     };
   }
 
@@ -38,6 +43,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     semuaDokumen,
     semuaPermohonan,
     { hariLibur },
+    semuaLingkungan,
+    semuaLaporan,
   ] = await Promise.all([
     db.select({ n: count() }).from(unitKerja).where(eq(unitKerja.aktif, true)),
     db.select({ n: count() }).from(jabatan).where(eq(jabatan.aktif, true)),
@@ -56,6 +63,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       .from(dokumen),
     daftarPermohonan(db),
     bacaPengaturanPerizinan(db),
+    daftarDokumenLingkungan(db),
+    laporanBerjalan(db),
   ]);
 
   return {
@@ -70,6 +79,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     jatuhTempo: dokumenJatuhTempo(semuaDokumen).slice(0, 5),
     // Permohonan izin yang tenggatnya sudah atau hampir terlewat.
     mendesak: permohonanMendesak(semuaPermohonan, new Date(), hariLibur).slice(0, 5),
+    // Pemeriksaan lingkungan yang tenggatnya berjalan dan sudah mendesak.
+    lingkungan: lingkunganMendesak(semuaLingkungan, new Date(), hariLibur).slice(0, 5),
+    // Laporan pemantauan yang belum masuk padahal sudah jatuh tempo.
+    tunggakan: laporanTertunggak(semuaLaporan).slice(0, 5),
   };
 }
 
@@ -169,6 +182,60 @@ export default function Dasbor({ loaderData }: Route.ComponentProps) {
                   data-testid={`mendesak-${p.id}`}
                 >
                   <code className="text-xs">{p.nomor}</code> — {p.judul}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {loaderData.lingkungan.length > 0 ? (
+        <section
+          className="rounded-md border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+          data-testid="kartu-lingkungan-mendesak"
+        >
+          <h2 className="font-medium text-rose-900 dark:text-rose-100">
+            {t.lingkungan.mendesak}
+          </h2>
+          <p className="mt-1 text-sm text-rose-800 dark:text-rose-200">
+            {t.lingkungan.mendesakKeterangan}
+          </p>
+          <ul className="mt-3 flex flex-col gap-1">
+            {loaderData.lingkungan.map((d) => (
+              <li key={d.id} className="text-sm">
+                <Link
+                  to={`/internal/lingkungan/${d.id}`}
+                  className="text-rose-900 underline dark:text-rose-100"
+                  data-testid={`lingkungan-mendesak-${d.id}`}
+                >
+                  <code className="text-xs">{d.nomor}</code> — {d.judul}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {loaderData.tunggakan.length > 0 ? (
+        <section
+          className="rounded-md border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950"
+          data-testid="kartu-tunggakan"
+        >
+          <h2 className="font-medium text-amber-900 dark:text-amber-100">
+            {t.lingkungan.tunggakan}
+          </h2>
+          <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
+            {t.lingkungan.tunggakanKeterangan}
+          </p>
+          <ul className="mt-3 flex flex-col gap-1">
+            {loaderData.tunggakan.map((l) => (
+              <li key={l.id} className="text-sm">
+                <Link
+                  to={`/internal/lingkungan/${l.dokumenLingkunganId}`}
+                  className="text-amber-900 underline dark:text-amber-100"
+                  data-testid={`tunggakan-${l.id}`}
+                >
+                  {l.namaTenant} — {l.namaKewajiban} {l.periode}
                 </Link>
               </li>
             ))}

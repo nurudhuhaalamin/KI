@@ -48,9 +48,19 @@ const PENGATURAN: { kunci: string; nilai: string; keterangan: string }[] = [
   { kunci: "kawasan.kontak_telepon", nilai: "0401-000000", keterangan: "Telepon kontak" },
   { kunci: "kawasan.locale_bawaan", nilai: "id", keterangan: "Bahasa bawaan antarmuka" },
   {
-    kunci: "perizinan.hari_libur",
+    kunci: "kawasan.hari_libur",
     nilai: "2026-08-17, 2026-12-25",
-    keterangan: "Hari libur yang tidak dihitung sebagai hari kerja pada tenggat perizinan",
+    keterangan: "Hari libur yang tidak dihitung sebagai hari kerja pada seluruh tenggat",
+  },
+  {
+    kunci: "lingkungan.hari_administrasi",
+    nilai: "3",
+    keterangan: "Batas pemeriksaan kelengkapan administrasi, dalam hari kerja",
+  },
+  {
+    kunci: "lingkungan.hari_substansi",
+    nilai: "10",
+    keterangan: "Batas pemeriksaan substansi, dalam hari kerja",
   },
 ];
 
@@ -672,6 +682,106 @@ const PERMOHONAN: PermohonanDemo[] = [
   },
 ];
 
+// Tiga dokumen lingkungan pada tahap berbeda, supaya seluruh alur 3+10 langsung
+// terlihat setelah seed: satu tenggat administrasinya sudah lewat, satu sedang
+// diperiksa substansinya lengkap dengan tim dan temuan, satu sudah disetujui
+// beserta kewajiban pemantauan yang salah satu periodenya menunggak.
+type LingkunganDemo = {
+  id: string;
+  nomor: string;
+  urut: number;
+  jenis: string;
+  judul: string;
+  status: string;
+  kavlingId: string | null;
+  diajukanHari: number | null;
+  tenggatAdministrasiHari: number | null;
+  tenggatSubstansiHari: number | null;
+  selesaiHari: number | null;
+};
+
+const LINGKUNGAN: LingkunganDemo[] = [
+  {
+    id: "dlh-demo-1",
+    nomor: "RKL/001/2026",
+    urut: 1,
+    jenis: "rkl-rpl-rinci",
+    judul: "RKL-RPL Rinci Pabrik Pengolahan Nikel",
+    status: "pemeriksaan-administrasi",
+    kavlingId: "kav-a01",
+    diajukanHari: -6,
+    tenggatAdministrasiHari: -3,
+    tenggatSubstansiHari: null,
+    selesaiHari: null,
+  },
+  {
+    id: "dlh-demo-2",
+    nomor: "UKL/001/2026",
+    urut: 1,
+    jenis: "ukl-upl",
+    judul: "UKL-UPL Gudang Bahan Baku",
+    status: "pemeriksaan-substansi",
+    kavlingId: "kav-a02",
+    diajukanHari: -12,
+    tenggatAdministrasiHari: -9,
+    tenggatSubstansiHari: 4,
+    selesaiHari: null,
+  },
+  {
+    id: "dlh-demo-3",
+    nomor: "RTA/001/2026",
+    urut: 1,
+    jenis: "rintek-air-limbah",
+    judul: "Rincian Teknis Pembuangan Air Limbah ke IPAL Kawasan",
+    status: "disetujui",
+    kavlingId: "kav-a01",
+    diajukanHari: -240,
+    tenggatAdministrasiHari: -237,
+    tenggatSubstansiHari: -226,
+    selesaiHari: -220,
+  },
+];
+
+/** Anggota tim pemeriksa untuk dokumen yang sudah masuk pemeriksaan. */
+const TIM_DEMO: { dokumenId: string; anggota: { userId: string; peran: string }[] }[] = [
+  {
+    dokumenId: "dlh-demo-2",
+    anggota: [
+      { userId: "demo-admin", peran: "ketua" },
+      { userId: "demo-staf", peran: "anggota" },
+    ],
+  },
+];
+
+const TEMUAN_DEMO: {
+  id: string;
+  dokumenId: string;
+  olehId: string;
+  tahap: string;
+  aspek: string;
+  temuan: string;
+  rekomendasi: string | null;
+}[] = [
+  {
+    id: "ctn-demo-1",
+    dokumenId: "dlh-demo-2",
+    olehId: "demo-staf",
+    tahap: "administrasi",
+    aspek: "Kelengkapan berkas",
+    temuan: "Seluruh berkas administrasi lengkap dan sesuai daftar periksa.",
+    rekomendasi: null,
+  },
+  {
+    id: "ctn-demo-2",
+    dokumenId: "dlh-demo-2",
+    olehId: "demo-admin",
+    tahap: "substansi",
+    aspek: "Pengelolaan air limbah",
+    temuan: "Debit air limbah yang diperkirakan belum dirinci per sumber.",
+    rekomendasi: "Lampirkan neraca air beserta perkiraan debit tiap sumber.",
+  },
+];
+
 function kutip(nilai: string): string {
   return `'${nilai.replaceAll("'", "''")}'`;
 }
@@ -939,6 +1049,124 @@ async function main() {
     );
   }
 
+  // Perizinan lingkungan dimuat setelah users: tim pemeriksa dan pemohonnya
+  // merujuk akun, dan kewajiban pemantauan merujuk dokumennya.
+  //
+  // Baris yang dibuat aplikasi saat dicoba — berkas, temuan, dan laporan
+  // pemantauan — dikembalikan ke keadaan awal lebih dulu. Tanpa ini, laporan
+  // yang sudah dikirim pada percobaan sebelumnya tetap berstatus terkirim dan
+  // data demo perlahan menyimpang dari yang dimaksudkan.
+  {
+    const idDemo = LINGKUNGAN.map((d) => kutip(d.id)).join(", ");
+    baris.push(`DELETE FROM berkas_lingkungan WHERE dokumen_lingkungan_id IN (${idDemo});`);
+    baris.push(`DELETE FROM catatan_pemeriksaan WHERE dokumen_lingkungan_id IN (${idDemo});`);
+    baris.push(
+      `DELETE FROM laporan_pemantauan WHERE kewajiban_id IN ` +
+        `(SELECT id FROM kewajiban_pemantauan WHERE dokumen_lingkungan_id IN (${idDemo}));`,
+    );
+  }
+
+  for (const d of LINGKUNGAN) {
+    baris.push(
+      upsert("dokumen_lingkungan", {
+        id: d.id,
+        nomor: d.nomor,
+        urut: d.urut,
+        tahun: 2026,
+        tenant_id: "ten-demo-1",
+        kavling_id: d.kavlingId,
+        diajukan_oleh: "demo-tenant",
+        jenis: d.jenis,
+        judul: d.judul,
+        ringkasan_kegiatan: null,
+        status: d.status,
+        tanggal_diajukan: d.diajukanHari === null ? null : hariDariSekarang(d.diajukanHari),
+        tenggat_administrasi:
+          d.tenggatAdministrasiHari === null
+            ? null
+            : hariDariSekarang(d.tenggatAdministrasiHari),
+        tenggat_substansi:
+          d.tenggatSubstansiHari === null ? null : hariDariSekarang(d.tenggatSubstansiHari),
+        tanggal_selesai: d.selesaiHari === null ? null : hariDariSekarang(d.selesaiHari),
+        created_at: sekarang,
+        updated_at: sekarang,
+      }),
+    );
+  }
+
+  // Tim dan temuan dibuat ulang tiap seed supaya susunannya tidak menumpuk.
+  for (const t of TIM_DEMO) {
+    const timId = `${t.dokumenId}-tim`;
+    baris.push(
+      upsert("tim_pemeriksa", {
+        id: timId,
+        dokumen_lingkungan_id: t.dokumenId,
+        dibentuk_oleh: "demo-admin",
+        catatan: null,
+        created_at: sekarang,
+      }),
+    );
+    baris.push(`DELETE FROM anggota_tim_pemeriksa WHERE tim_id = ${kutip(timId)};`);
+    for (const a of t.anggota) {
+      baris.push(
+        upsert("anggota_tim_pemeriksa", {
+          id: `${timId}-${a.userId}`,
+          tim_id: timId,
+          user_id: a.userId,
+          peran: a.peran,
+          created_at: sekarang,
+        }),
+      );
+    }
+  }
+
+  for (const c of TEMUAN_DEMO) {
+    baris.push(
+      upsert("catatan_pemeriksaan", {
+        id: c.id,
+        dokumen_lingkungan_id: c.dokumenId,
+        oleh_id: c.olehId,
+        tahap: c.tahap,
+        aspek: c.aspek,
+        temuan: c.temuan,
+        rekomendasi: c.rekomendasi,
+        created_at: sekarang,
+      }),
+    );
+  }
+
+  // Dokumen yang sudah disetujui punya keputusan bernomor dan kewajiban
+  // pemantauan; baris laporannya dibuat aplikasi saat halaman dibuka.
+  baris.push(
+    upsert("keputusan_lingkungan", {
+      id: "skl-demo-1",
+      dokumen_lingkungan_id: "dlh-demo-3",
+      nomor_keputusan: "SK-LH/001/2026",
+      urut: 1,
+      tahun: 2026,
+      hasil: "disetujui",
+      diputus_oleh: "demo-admin",
+      jabatan_id: "jab-dirut",
+      berlaku_sampai: hariDariSekarang(900),
+      pertimbangan: "Rincian teknis memenuhi baku mutu dan kapasitas IPAL kawasan mencukupi.",
+      created_at: sekarang,
+    }),
+  );
+
+  baris.push(
+    upsert("kewajiban_pemantauan", {
+      id: "kwj-demo-1",
+      dokumen_lingkungan_id: "dlh-demo-3",
+      nama: "Laporan pemantauan kualitas air limbah",
+      nama_en: "Wastewater quality monitoring report",
+      frekuensi: "semesteran",
+      // Mulai jauh di belakang supaya ada periode yang sudah jatuh tempo.
+      mulai: hariDariSekarang(-400),
+      aktif: 1,
+      created_at: sekarang,
+    }),
+  );
+
   for (const item of PENGATURAN) {
     baris.push(
       upsert(
@@ -997,8 +1225,8 @@ async function main() {
     `\nSelesai. ${UNIT_KERJA.length} unit kerja, ${JABATAN.length} jabatan, ${KAVLING.length} kavling, ` +
       `${TENANT.length} tenant, ${KONTRAK.length} kontrak, ${DOKUMEN.length} dokumen ` +
       `(${VERSI.length} berkas versi), ${JENIS_IZIN.length} jenis izin, ` +
-      `${PERMOHONAN.length} permohonan, ${AKUN.length} akun demo, dan ` +
-      `${PENGATURAN.length} pengaturan dimuat.`,
+      `${PERMOHONAN.length} permohonan, ${LINGKUNGAN.length} dokumen lingkungan, ` +
+      `${AKUN.length} akun demo, dan ${PENGATURAN.length} pengaturan dimuat.`,
   );
   console.log(`Kata sandi seluruh akun demo: ${KATA_SANDI_DEMO}`);
   for (const akun of AKUN) console.log(`  - ${akun.surel} (${akun.peran})`);

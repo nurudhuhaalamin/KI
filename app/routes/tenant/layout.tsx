@@ -32,6 +32,13 @@ export default function TataLetakTenant() {
           >
             {t.nav.permohonan}
           </Link>
+          <Link
+            to="/portal/lingkungan"
+            className="text-sm text-slate-600 hover:underline dark:text-slate-400"
+            data-testid="menu-lingkungan"
+          >
+            {t.nav.lingkungan}
+          </Link>
         </div>
         <div className="flex items-center gap-4">
           <PemilihBahasa aktif={locale} />

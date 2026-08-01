@@ -31,6 +31,8 @@ export default [
       route("jenis-izin/:id", "routes/internal/jenis-izin/ubah.tsx"),
       route("permohonan", "routes/internal/permohonan/daftar.tsx"),
       route("permohonan/:id", "routes/internal/permohonan/ubah.tsx"),
+      route("lingkungan", "routes/internal/lingkungan/daftar.tsx"),
+      route("lingkungan/:id", "routes/internal/lingkungan/rincian.tsx"),
       route("pengaturan", "routes/internal/pengaturan.tsx"),
       route("jejak-audit", "routes/internal/jejak-audit.tsx"),
     ]),
@@ -45,6 +47,9 @@ export default [
       route("permohonan", "routes/tenant/permohonan/daftar.tsx"),
       route("permohonan/baru", "routes/tenant/permohonan/baru.tsx"),
       route("permohonan/:id", "routes/tenant/permohonan/rincian.tsx"),
+      route("lingkungan", "routes/tenant/lingkungan/daftar.tsx"),
+      route("lingkungan/baru", "routes/tenant/lingkungan/baru.tsx"),
+      route("lingkungan/:id", "routes/tenant/lingkungan/rincian.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig;

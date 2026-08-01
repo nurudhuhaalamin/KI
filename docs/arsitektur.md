@@ -93,7 +93,7 @@ Nomor Bagian merujuk proposal sumber yang menjadi acuan cakupan.
 | B   | Kavling, tenant & kontrak, portal tenant                                 | IV.3, IV.4    | **selesai**                             |
 | C   | Pengendalian dokumen: daftar induk, penomoran, versi, pengesahan         | XI.1          | **selesai**                             |
 | D   | Perizinan satu pintu: formulir dinamis, persetujuan berjenjang, SLA      | IV.1, IV.2    | **selesai**                             |
-| E   | RKL-RPL Rinci: tim pemeriksa, verifikasi 3+10 hari, PKPLH PU, pemantauan | V.7–V.9       | belum                                   |
+| E   | RKL-RPL Rinci: tim pemeriksa, verifikasi 3+10 hari, PKPLH PU, pemantauan | V.7–V.9       | **selesai**                             |
 | F   | Keuangan kawasan: tarif, meter, tagihan, pembayaran, tunggakan           | IV.5          | belum                                   |
 | G   | Infrastruktur & pemeliharaan: aset, jadwal, inspeksi, work order         | V.1, V.5, V.6 | belum                                   |
 | H   | Lingkungan: IPAL, sampling air limbah, manifes sampah                    | V.2–V.4       | belum                                   |
@@ -120,7 +120,8 @@ K → L → M → pengerasan. Modul belakangan memakai data dan pola modul di de
 8. `npm run check` dan `npm run test:e2e` harus hijau sebelum PR.
 
 Modul yang menerbitkan sesuatu bernomor memakai `app/lib/penomoran/`, bukan
-membuat penomorannya sendiri. Modul yang menyimpan berkas menambah satu cabang
+membuat penomorannya sendiri. Modul yang menjanjikan tenggat memakai
+`app/lib/waktu-kerja/` — hari kerja, bukan hari kalender. Modul yang menyimpan berkas menambah satu cabang
 di `app/lib/berkas/akses.ts`, bukan menulis rute unduhan berikut pemeriksaan
 izinnya sendiri. Pemberitahuan lewat `kirimNotifikasi()` di `app/lib/notifikasi/`.
 
@@ -130,6 +131,7 @@ Seluruh suite kini sekitar 25 menit dan berjalan satu worker karena berbagi satu
 database. Jalankan per berkas bila alat yang dipakai punya batas waktu:
 
 ```
+npx playwright test e2e/modul-e-lingkungan.spec.ts
 npx playwright test e2e/modul-d-perizinan.spec.ts
 npx playwright test e2e/alur-utama.spec.ts e2e/modul-a-fondasi.spec.ts
 npx playwright test e2e/modul-b-kavling-tenant.spec.ts

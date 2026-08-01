@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./dokumen";
 export * from "./kavling";
 export * from "./kontrak";
+export * from "./lingkungan";
 export * from "./organisasi";
 export * from "./perizinan";
 export * from "./sistem";

@@ -21,9 +21,18 @@ export default function TataLetakTenant() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-        <Link to="/portal" className="font-semibold">
-          {namaKawasan}
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to="/portal" className="font-semibold">
+            {namaKawasan}
+          </Link>
+          <Link
+            to="/portal/permohonan"
+            className="text-sm text-slate-600 hover:underline dark:text-slate-400"
+            data-testid="menu-permohonan"
+          >
+            {t.nav.permohonan}
+          </Link>
+        </div>
         <div className="flex items-center gap-4">
           <PemilihBahasa aktif={locale} />
           <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-400">
